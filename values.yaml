@@ -33,6 +33,8 @@ postgres:
       value: --lc-collate=en_US.utf8 --lc-ctype=en_US.utf8
   persistence:
     enabled: true
+    # This is the claim name, must be RFC1123 valid
+    name: midpoint-postgres
     size: 5Gi
     storageClass: ""
     hostPath: /mnt/data/postgres
@@ -119,6 +121,7 @@ app:
           mountPath: /opt/midpoint/var
   persistence:
     enabled: true
+    name: midpoint-home
     size: 1Gi
     storageClass: ""
     hostPath: /mnt/data/midpoint
