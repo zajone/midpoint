@@ -116,6 +116,7 @@ app:
             bin/ninja.sh run-sql --create --mode AUDIT
           else
             echo "Repository init is not needed..."
+          fi
       volumeMounts:
         - name: midpoint-home
           mountPath: /opt/midpoint/var
