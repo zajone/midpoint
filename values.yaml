@@ -1,13 +1,16 @@
+# Namespace and overrides
 namespace: midpoint
 nameOverride: ''
 fullnameOverride: ''
 imagePullSecrets: []
 
+# Secret for Postgres
 secret:
   name: midpoint-db-secret
   stringData:
     POSTGRES_PASSWORD: db.secret.pw.007
 
+# Postgres configuration
 postgres:
   enabled: true
   name: midpoint-postgres
@@ -31,9 +34,12 @@ postgres:
   persistence:
     enabled: true
     size: 5Gi
+    storageClass: ""
+    hostPath: /mnt/data/postgres
     accessModes:
       - ReadWriteOnce
 
+# MidPoint application configuration
 app:
   enabled: true
   name: midpoint
@@ -108,17 +114,18 @@ app:
             bin/ninja.sh run-sql --create --mode AUDIT
           else
             echo "Repository init is not needed..."
-          fi
       volumeMounts:
         - name: midpoint-home
           mountPath: /opt/midpoint/var
   persistence:
     enabled: true
-    name: midpoint-home
     size: 1Gi
+    storageClass: ""
+    hostPath: /mnt/data/midpoint
     accessModes:
       - ReadWriteOnce
 
+# Ingress configuration
 ingress:
   enabled: true
   className: nginx
@@ -130,6 +137,7 @@ ingress:
           servicePort: 8080
   tls: []
 
+# Resources, tolerations, and affinity
 resources: {}
 tolerations: []
 affinity: {}
