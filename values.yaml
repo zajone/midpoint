@@ -112,7 +112,6 @@ app:
       volumeMounts:
         - name: midpoint-home
           mountPath: /opt/midpoint/var
-app:
   persistence:
     enabled: true
     name: midpoint-home
