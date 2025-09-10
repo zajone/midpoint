@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Values.app.name }}
+  namespace: {{ .Values.namespace }}
+spec:
+  serviceName: {{ .Values.app.name }}
+  replicas: {{ .Values.app.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.app.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.app.name }}
+    spec:
+      initContainers:
+      {{- range .Values.app.initContainers }}
+        - name: {{ .name }}
+          image: {{ .image }}
+          command: {{ toYaml .command | nindent 10 }}
+          {{- if .volumeMounts }}
+          volumeMounts:
+          {{ toYaml .volumeMounts | nindent 12 }}
+          {{- end }}
+      {{- end }}
+      containers:
+        - name: {{ .Values.app.name }}
+          image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag }}"
+          imagePullPolicy: {{ .Values.app.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.app.service.port }}
+          env:
+          {{- range .Values.app.env }}
+            - name: {{ .name }}
+              {{- if .value }}
+              value: {{ .value | quote }}
+              {{- else if .valueFrom }}
+              valueFrom:
+{{ toYaml .valueFrom | indent 16 }}
+              {{- end }}
+          {{- end }}
+          volumeMounts:
+            - name: midpoint-home
+              mountPath: /opt/midpoint/var
+      volumes: []
+  volumeClaimTemplates:
+  - metadata:
+      name: {{ .Values.app.persistence.name }}
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.app.persistence.size }}
