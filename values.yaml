@@ -1,7 +1,7 @@
 # Namespace and overrides
 namespace: midpoint
-nameOverride: ''
-fullnameOverride: ''
+nameOverride: midpoint
+fullnameOverride: midpoint
 imagePullSecrets: []
 
 # Secret for Postgres
