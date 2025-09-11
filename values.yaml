@@ -76,6 +76,9 @@ app:
     - name: midpoint-config
       mountPath: /opt/midpoint/var/config.xml
       subPath: config.xml
+      
+  https:
+    enabled: false
 
   persistence:
     enabled: true

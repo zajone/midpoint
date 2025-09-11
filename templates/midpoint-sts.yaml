@@ -57,7 +57,7 @@ spec:
         - name: midpoint-config
           configMap:
             name: midpoint-config
-        {{- if .Values.app.https.enabled }}
+        {{- if and .Values.app.https .Values.app.https.enabled }}
         - name: midpoint-keystore
           secret:
             secretName: {{ .Values.app.https.keystore.secretName }}
