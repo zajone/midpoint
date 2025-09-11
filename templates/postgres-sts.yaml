@@ -25,7 +25,7 @@ spec:
               value: {{ .value | quote }}
               {{- else if .valueFrom }}
               valueFrom:
-                {{ toYaml .valueFrom | nindent 16 }}
+{{ toYaml .valueFrom | nindent 16 }} # Corrected nindent for valueFrom
               {{- end }}
           {{- end }}
           ports:
@@ -39,7 +39,7 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
-  volumeClaimTemplates:
+  volumeClaimTemplates: # Corrected indentation
     - metadata:
         name: data
       spec:

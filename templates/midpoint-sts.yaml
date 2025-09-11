@@ -21,9 +21,10 @@ spec:
           command: {{ toYaml .command | nindent 10 }}
           {{- if .volumeMounts }}
           volumeMounts:
-          {{ toYaml .volumeMounts | nindent 12 }}
+{{ toYaml .volumeMounts | nindent 12 }}
           {{- end }}
       {{- end }}
+
       containers:
         - name: {{ .Values.app.name }}
           image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag }}"
@@ -37,14 +38,8 @@ spec:
               value: {{ .value | quote }}
               {{- else if .valueFrom }}
               valueFrom:
-                {{ toYaml .valueFrom | nindent 16 }}
+{{ toYaml .valueFrom | nindent 16 }}
               {{- end }}
-          {{- end }}
-          {{- if .Values.app.https.enabled }}
-            - name: MIDPOINT_KEYSTORE
-              value: {{ .Values.app.https.keystore.path | quote }}
-            - name: MIDPOINT_KEYSTORE_PASSWORD
-              value: {{ .Values.app.https.keystore.password | quote }}
           {{- end }}
           volumeMounts:
             - name: midpoint-home
@@ -52,25 +47,32 @@ spec:
             - name: midpoint-config
               mountPath: /opt/midpoint/var/config.xml
               subPath: config.xml
-          {{- if .Values.app.https.enabled }}
-            - name: keystore
+            {{- if .Values.app.https.enabled }}
+            - name: midpoint-keystore
               mountPath: {{ .Values.app.https.keystore.path }}
               subPath: keystore.p12
-          {{- end }}
+            {{- end }}
+
       volumes:
-      {{- if .Values.volumes }}
-      {{ toYaml .Values.volumes | nindent 6 }}
-      {{- end }}
-      {{- if .Values.app.https.enabled }}
-      - name: keystore
-        secret:
-          secretName: {{ .Values.app.https.keystore.secretName }}
-  volumeClaimTemplates:
+        - name: midpoint-config
+          configMap:
+            name: midpoint-config
+        {{- if .Values.app.https.enabled }}
+        - name: midpoint-keystore
+          secret:
+            secretName: {{ .Values.app.https.keystore.secretName }}
+        {{- end }}
+
+  {{- if .Values.app.persistence.enabled }}
+  volumeClaimTemplates: # Corrected indentation
     - metadata:
-        name: midpoint-home
+        name: {{ .Values.app.persistence.name }}
       spec:
         accessModes:
-          - ReadWriteOnce
+        {{- range .Values.app.persistence.accessModes }}
+          - {{ . }}
+        {{- end }}
         resources:
           requests:
             storage: {{ .Values.app.persistence.size }}
+  {{- end }}
