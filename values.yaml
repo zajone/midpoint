@@ -64,7 +64,7 @@ app:
     - name: MP_UNSET_midpoint_repository_hibernateHbm2ddl
       value: '1'
     - name: MP_NO_ENV_COMPAT
-      value: '1't
+      value: '1'
 
     # HTTP port (optional, keep HTTP enabled)
     - name: MP_SET_midpoint_http_port
