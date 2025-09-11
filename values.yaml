@@ -130,9 +130,6 @@ volumes:
   - name: midpoint-config
     configMap:
       name: midpoint-config
-  - name: keystore-volume
-    secret:
-      secretName: midpoint-keystore
 
 ingress:
   enabled: true
