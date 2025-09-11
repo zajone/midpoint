@@ -1,16 +1,13 @@
-# Namespace and overrides
 namespace: midpoint
 nameOverride: midpoint
 fullnameOverride: midpoint
 imagePullSecrets: []
 
-# Secret for Postgres
 secret:
   name: midpoint-db-secret
   stringData:
     POSTGRES_PASSWORD: db.secret.pw.007
 
-# Postgres configuration
 postgres:
   enabled: true
   name: midpoint-postgres
@@ -39,7 +36,6 @@ postgres:
     accessModes:
       - ReadWriteOnce
 
-# MidPoint application configuration
 app:
   enabled: true
   name: midpoint
@@ -69,10 +65,44 @@ app:
       value: '1'
     - name: MP_NO_ENV_COMPAT
       value: '1'
+
+    # Keystore for HTTPS
     - name: MP_SET_midpoint_keystorePath
       value: /opt/midpoint/var/keystore.p12
     - name: MP_SET_midpoint_keystorePassword
       value: changeit
+
+    # HTTPS configuration
+    - name: MP_SET_midpoint_https_port
+      value: "8443"
+    - name: MP_SET_midpoint_https_keystorePath
+      value: /opt/midpoint/var/keystore.p12
+    - name: MP_SET_midpoint_https_keystorePassword
+      value: changeit
+
+    # HTTP port (optional, keep HTTP enabled)
+    - name: MP_SET_midpoint_http_port
+      value: "8080"
+
+  volumeMounts:
+    - name: midpoint-home
+      mountPath: /opt/midpoint/var
+    - name: midpoint-config
+      mountPath: /opt/midpoint/var/config.xml
+      subPath: config.xml
+    - name: keystore-volume
+      mountPath: /opt/midpoint/var/keystore.p12
+      subPath: keystore.p12
+
+  persistence:
+    enabled: true
+    name: midpoint-home
+    size: 1Gi
+    storageClass: ""
+    hostPath: /mnt/data/midpoint
+    accessModes:
+      - ReadWriteOnce
+
   initContainers:
     - name: wait-for-db
       image: postgres:16-alpine
@@ -113,30 +143,14 @@ app:
           mountPath: /opt/midpoint/var/config.xml
           subPath: config.xml
 
-  persistence:
-    enabled: true
-    name: midpoint-home
-    size: 1Gi
-    storageClass: ""
-    hostPath: /mnt/data/midpoint
-    accessModes:
-      - ReadWriteOnce
-
-  # HTTPS / Keystore configuration
-  https:
-    enabled: true
-    keystore:
-      secretName: midpoint-keystore
-      path: /opt/midpoint/var/keystore.p12
-      password: changeit   # Use a secret for production
-
-# Volumes for ConfigMap
 volumes:
   - name: midpoint-config
     configMap:
       name: midpoint-config
+  - name: keystore-volume
+    secret:
+      secretName: midpoint-keystore
 
-# Ingress configuration
 ingress:
   enabled: true
   className: nginx
@@ -148,7 +162,6 @@ ingress:
           servicePort: 8080
   tls: []
 
-# Resources, tolerations, and affinity
 resources: {}
 tolerations: []
 affinity: {}
