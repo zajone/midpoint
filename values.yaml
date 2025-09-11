@@ -71,7 +71,7 @@ app:
       value: '1'
     - name: MP_SET_midpoint_keystorePath
       value: /opt/midpoint/var/keystore.p12
-    - name: MP_SET_midpoint_https_keystorePassword
+    - name: MP_SET_midpoint_keystorePassword
       value: changeit
   initContainers:
     - name: wait-for-db
