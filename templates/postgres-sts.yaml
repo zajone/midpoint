@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Values.postgres.name }}
+  namespace: {{ .Values.namespace }}
+spec:
+  serviceName: {{ .Values.postgres.name }}
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.postgres.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.postgres.name }}
+    spec:
+      containers:
+        - name: postgres
+          image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"
+          imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
+          env:
+{{ toYaml .Values.postgres.env | indent 12 }}
+          ports:
+            - containerPort: {{ .Values.postgres.service.port }}
+              name: pg
+          readinessProbe:
+            exec:
+              command: ["pg_isready","-U","midpoint"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: {{ toYaml .Values.postgres.persistence.accessModes | nindent 10 }}
+        resources:
+          requests:
+            storage: {{ .Values.postgres.persistence.size }}

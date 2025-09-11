@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Values.app.name }}
+  namespace: {{ .Values.namespace }}
+spec:
+  serviceName: {{ .Values.app.name }}
+  replicas: {{ .Values.app.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.app.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.app.name }}
+    spec:
+      initContainers:
+{{- range .Values.app.initContainers }}
+        - name: {{ .name }}
+          image: {{ .image }}
+          command: {{ toYaml .command | nindent 12 }}
+{{- if .env }}
+          env:
+{{- range .env }}
+            - name: {{ .name }}
+{{- if .value }}
+              value: {{ .value | quote }}
+{{- else if .valueFrom }}
+              valueFrom:
+{{ toYaml .valueFrom | nindent 16 }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- if .volumeMounts }}
+          volumeMounts:
+{{ toYaml .volumeMounts | nindent 12 }}
+{{- end }}
+{{- end }}
+      containers:
+        - name: {{ .Values.app.name }}
+          image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag }}"
+          imagePullPolicy: {{ .Values.app.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.app.service.port }}
+          readinessProbe:
+            httpGet:
+              path: /midpoint/login.htm # Common MidPoint login page, adjust if a specific health endpoint exists
+              port: {{ .Values.app.service.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /midpoint/login.htm # Common MidPoint login page, adjust if a specific health endpoint exists
+              port: {{ .Values.app.service.port }}
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          env:
+{{- range .Values.app.env }}
+            - name: {{ .name }}
+{{- if .value }}
+              value: {{ .value | quote }}
+{{- else if .valueFrom }}
+              valueFrom:
+{{ toYaml .valueFrom | nindent 16 }}
+{{- end }}
+{{- end }}
+          volumeMounts:
+            - name: {{ .Values.app.persistence.name }}
+              mountPath: /opt/midpoint/var
+      volumes:
+        - name: {{ .Values.app.persistence.name }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.app.persistence.name }}
+  volumeClaimTemplates:
+    - metadata:
+        name: {{ .Values.app.persistence.name }}
+      spec:
+        accessModes: {{ toYaml .Values.app.persistence.accessModes | nindent 8 }}
+        resources:
+          requests:
+            storage: {{ .Values.app.persistence.size }}

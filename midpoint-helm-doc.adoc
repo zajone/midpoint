@@ -1,0 +1,473 @@
+cat << 'EOF' > midpoint-helm-doc.adoc
+= MidPoint Helm Chart Documentation
+:toc:
+:toclevels: 3
+:sectnums:
+
+== How to install MidPoint via Helm
+
+- helm install midpoint ./helm-midpoint \
+  --namespace midpoint \
+  --create-namespace
+
+- helm upgrade --install midpoint . --namespace midpoint --debug - (When you’re developing the chart locally (helm-midpoint/) and making changes)
+
+- helm list -n midpoint (Lists all Helm releases in the midpoint namespace)
+- kubectl get all -n midpoint (Lists all Kubernetes resources in the midpoint namespace that were created (or exist))
+
+- google-chrome https://midpoint.local/midpoint (open in Ubuntu)
+
+- helm uninstall midpoint --namespace midpoint (uninstall midpoint)
+
+== Overview
+
+This document provides detailed documentation for the MidPoint Helm chart. The chart deploys:
+
+* MidPoint application
+* PostgreSQL database
+* Kubernetes services, stateful sets, ingress, and secrets
+
+It is based on the following Helm chart metadata:
+
+[source,yaml]
+----
+apiVersion: v2
+name: midpoint
+description: Helm chart for MidPoint and Postgres as per provided manifests
+type: application
+version: 0.1.0
+appVersion: 4.8.4-alpine
+----
+
+== Values Configuration
+
+The chart uses the following `values.yaml` configuration:
+
+[source,yaml]
+----
+namespace: midpoint
+nameOverride: ''
+fullnameOverride: ''
+imagePullSecrets: []
+
+secret:
+  name: midpoint-db-secret
+  stringData:
+    POSTGRES_PASSWORD: db.secret.pw.007
+
+postgres:
+  enabled: true
+  name: midpoint-postgres
+  image:
+    repository: postgres
+    tag: 16-alpine
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 5432
+  env:
+    - name: POSTGRES_USER
+      value: midpoint
+    - name: POSTGRES_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: midpoint-db-secret
+          key: POSTGRES_PASSWORD
+    - name: POSTGRES_INITDB_ARGS
+      value: --lc-collate=en_US.utf8 --lc-ctype=en_US.utf8
+  persistence:
+    enabled: true
+    size: 5Gi
+    accessModes:
+      - ReadWriteOnce
+
+app:
+  enabled: true
+  name: midpoint
+  replicaCount: 1
+  image:
+    repository: evolveum/midpoint
+    tag: 4.8.4-alpine
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8080
+  env:
+    - name: MP_SET_midpoint_repository_type
+      value: native
+    - name: MP_SET_midpoint_repository_database
+      value: postgresql
+    - name: MP_SET_midpoint_repository_jdbcUsername
+      value: midpoint
+    - name: MP_SET_midpoint_repository_jdbcPassword
+      valueFrom:
+        secretKeyRef:
+          name: midpoint-db-secret
+          key: POSTGRES_PASSWORD
+    - name: MP_SET_midpoint_repository_jdbcUrl
+      value: jdbc:postgresql://midpoint-postgres:5432/midpoint
+    - name: MP_UNSET_midpoint_repository_hibernateHbm2ddl
+      value: '1'
+    - name: MP_NO_ENV_COMPAT
+      value: '1'
+  initContainers:
+    - name: wait-for-db
+      image: postgres:16-alpine
+      command:
+        - sh
+        - -c
+        - |
+          until pg_isready -h midpoint-postgres -p 5432 -U midpoint; do
+            echo 'waiting for Postgres...'
+            sleep 2
+          done
+    - name: init-native-repo
+      image: evolveum/midpoint:4.8.4-alpine
+      env:
+        - name: MP_SET_midpoint_repository_type
+          value: native
+        - name: MP_SET_midpoint_repository_database
+          value: postgresql
+        - name: MP_SET_midpoint_repository_jdbcUrl
+          value: jdbc:postgresql://midpoint-postgres:5432/midpoint
+        - name: MP_SET_midpoint_repository_jdbcUsername
+          value: midpoint
+        - name: MP_SET_midpoint_repository_jdbcPassword
+          valueFrom:
+            secretKeyRef:
+              name: midpoint-db-secret
+              key: POSTGRES_PASSWORD
+        - name: MP_INIT_CFG
+          value: /opt/midpoint/var
+        - name: MP_NO_ENV_COMPAT
+          value: '1'
+      command:
+        - sh
+        - -c
+        - |
+          set -e
+          cd /opt/midpoint
+          bin/midpoint.sh init-native
+          echo " - - - - repository check - - - - "
+          bin/ninja.sh -B info >/dev/null 2>/tmp/ninja.log || true
+          if grep -q "ERROR" /tmp/ninja.log 2>/dev/null; then
+            bin/ninja.sh run-sql --create --mode REPOSITORY
+            bin/ninja.sh run-sql --create --mode AUDIT
+          else
+            echo "Repository init is not needed..."
+          fi
+      volumeMounts:
+        - name: midpoint-home
+          mountPath: /opt/midpoint/var
+  persistence:
+    enabled: true
+    name: midpoint-home
+    size: 1Gi
+    accessModes:
+      - ReadWriteOnce
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: midpoint.local
+      paths:
+        - path: /midpoint
+          pathType: Prefix
+          servicePort: 8080
+  tls: []
+
+resources: {}
+tolerations: []
+affinity: {}
+----
+
+== Kubernetes Resources (Examples)
+
+These are example rendered resources (using defaults shown above).
+
+=== Namespace (example)
+
+[source,yaml]
+----
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: midpoint
+----
+
+=== Services (examples)
+
+==== MidPoint Service
+[source,yaml]
+----
+apiVersion: v1
+kind: Service
+metadata:
+  name: midpoint
+  namespace: midpoint
+spec:
+  selector:
+    app: midpoint
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP
+----
+
+==== Postgres Service
+[source,yaml]
+----
+apiVersion: v1
+kind: Service
+metadata:
+  name: midpoint-postgres
+  namespace: midpoint
+spec:
+  selector:
+    app: midpoint-postgres
+  ports:
+    - name: pg
+      port: 5432
+      targetPort: 5432
+  type: ClusterIP
+----
+
+== Helm Templates (Source)
+
+The following are the exact Helm template files you provided.
+
+=== `namespace.yaml`
+[source,yaml]
+----
+{{- if .Values.namespace }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespace }}
+{{- end }}
+----
+
+=== `midpoint-svc.yaml`
+[source,yaml]
+----
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.app.name }}
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: {{ .Values.app.name }}
+  ports:
+    - name: http
+      port: {{ .Values.app.service.port }}
+      targetPort: {{ .Values.app.service.port }}
+  type: {{ .Values.app.service.type }}
+----
+
+=== `postgres-svc.yaml`
+[source,yaml]
+----
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.postgres.name }}
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: {{ .Values.postgres.name }}
+  ports:
+    - name: pg
+      port: {{ .Values.postgres.service.port }}
+      targetPort: {{ .Values.postgres.service.port }}
+  type: {{ .Values.postgres.service.type }}
+----
+
+=== `postgres-sts.yaml`
+[source,yaml]
+----
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Values.postgres.name }}
+  namespace: {{ .Values.namespace }}
+spec:
+  serviceName: {{ .Values.postgres.name }}
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.postgres.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.postgres.name }}
+    spec:
+      containers:
+        - name: postgres
+          image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"
+          imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
+          env:
+{{ toYaml .Values.postgres.env | indent 12 }}
+          ports:
+            - containerPort: {{ .Values.postgres.service.port }}
+              name: pg
+          readinessProbe:
+            exec:
+              command: ["pg_isready","-U","midpoint"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: {{ toYaml .Values.postgres.persistence.accessModes | nindent 10 }}
+        resources:
+          requests:
+            storage: {{ .Values.postgres.persistence.size }}
+----
+
+=== `midpoint-sts.yaml`  // ← this was missing; now included
+[source,yaml]
+----
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Values.app.name }}
+  namespace: {{ .Values.namespace }}
+spec:
+  serviceName: {{ .Values.app.name }}
+  replicas: {{ .Values.app.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.app.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.app.name }}
+    spec:
+      initContainers:
+{{- range .Values.app.initContainers }}
+        - name: {{ .name }}
+          image: {{ .image }}
+          command: {{ toYaml .command | nindent 12 }}
+{{- if .env }}
+          env:
+{{- range .env }}
+            - name: {{ .name }}
+{{- if .value }}
+              value: {{ .value | quote }}
+{{- else if .valueFrom }}
+              valueFrom:
+{{ toYaml .valueFrom | nindent 16 }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- if .volumeMounts }}
+          volumeMounts:
+{{ toYaml .volumeMounts | nindent 12 }}
+{{- end }}
+{{- end }}
+      containers:
+        - name: {{ .Values.app.name }}
+          image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag }}"
+          imagePullPolicy: {{ .Values.app.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.app.service.port }}
+          env:
+{{- range .Values.app.env }}
+            - name: {{ .name }}
+{{- if .value }}
+              value: {{ .value | quote }}
+{{- else if .valueFrom }}
+              valueFrom:
+{{ toYaml .valueFrom | nindent 16 }}
+{{- end }}
+{{- end }}
+          volumeMounts:
+            - name: {{ .Values.app.persistence.name }}
+              mountPath: /opt/midpoint/var
+      volumes:
+        - name: {{ .Values.app.persistence.name }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.app.persistence.name }}
+  volumeClaimTemplates:
+    - metadata:
+        name: {{ .Values.app.persistence.name }}
+      spec:
+        accessModes: {{ toYaml .Values.app.persistence.accessModes | nindent 8 }}
+        resources:
+          requests:
+            storage: {{ .Values.app.persistence.size }}
+----
+
+=== `ingress.yaml`
+[source,yaml]
+----
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.app.name }}
+  namespace: {{ .Values.namespace }}
+spec:
+{{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+{{- end }}
+  rules:
+  {{- range .Values.ingress.hosts }}
+    - host: {{ .host }}
+      http:
+        paths:
+        {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ $.Values.app.name }}
+                port:
+                  number: {{ .servicePort }}
+        {{- end }}
+  {{- end }}
+{{- if .Values.ingress.tls }}
+  tls:
+{{ toYaml .Values.ingress.tls | indent 4 }}
+{{- end }}
+{{- end }}
+----
+
+=== `helpers.tpl`
+[source,gotemplate]
+----
+{{/* No-op helpers (not strictly needed since we keep names from values for exact match) */}}
+{{- define "midpoint.labels" -}}
+app.kubernetes.io/name: {{ .Chart.Name }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/version: {{ .Chart.AppVersion }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end -}}
+----
+
+=== `secrets-db.yaml`
+[source,yaml]
+----
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.postgres.name }}
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: {{ .Values.postgres.name }}
+  ports:
+    - name: pg
+      port: {{ .Values.postgres.service.port }}
+      targetPort: {{ .Values.postgres.service.port }}
+  type: {{ .Values.postgres.service.type }}
+----
+
+EOF
