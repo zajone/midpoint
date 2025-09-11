@@ -111,6 +111,7 @@ app:
 
   persistence:
     enabled: true
+    name: midpoint-home
     size: 1Gi
     storageClass: ""
     hostPath: /mnt/data/midpoint

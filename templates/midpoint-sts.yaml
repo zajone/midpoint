@@ -5,7 +5,7 @@ metadata:
   namespace: {{ .Values.namespace }}
 spec:
   serviceName: {{ .Values.app.name }}
-  replicas: {{ .Values.app.replicas }}
+  replicas: {{ .Values.app.replicaCount }}
   selector:
     matchLabels:
       app: {{ .Values.app.name }}
@@ -37,21 +37,25 @@ spec:
               value: {{ .value | quote }}
               {{- else if .valueFrom }}
               valueFrom:
-{{ toYaml .valueFrom | indent 6 }}
+                {{ toYaml .valueFrom | nindent 16 }}
               {{- end }}
           {{- end }}
           volumeMounts:
-  - name: midpoint-home
-    mountPath: /opt/midpoint/var
-  - name: midpoint-config
-    mountPath: /opt/midpoint/var/config.xml
-    subPath: config.xml
-      volumes: []
+            - name: midpoint-home
+              mountPath: /opt/midpoint/var
+            - name: midpoint-config
+              mountPath: /opt/midpoint/var/config.xml
+              subPath: config.xml
+      volumes:
+      {{- if .Values.volumes }}
+      {{ toYaml .Values.volumes | nindent 6 }}
+      {{- end }}
   volumeClaimTemplates:
-  - metadata:
-      name: {{ .Values.app.persistence.name }}
-    spec:
-      accessModes: {{ toYaml .Values.app.persistence.accessModes | nindent 6 }}
-      resources:
-        requests:
-          storage: {{ .Values.app.persistence.size }}
+    - metadata:
+        name: midpoint-home
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ .Values.app.persistence.size }}

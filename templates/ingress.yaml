@@ -5,9 +5,9 @@ metadata:
   name: {{ .Values.app.name }}
   namespace: {{ .Values.namespace }}
 spec:
-{{- if .Values.ingress.className }}
+  {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}
-{{- end }}
+  {{- end }}
   rules:
   {{- range .Values.ingress.hosts }}
     - host: {{ .host }}
@@ -23,8 +23,8 @@ spec:
                   number: {{ .servicePort }}
         {{- end }}
   {{- end }}
-{{- if .Values.ingress.tls }}
+  {{- if .Values.ingress.tls }}
   tls:
-{{ toYaml .Values.ingress.tls | indent 4 }}
-{{- end }}
+    {{ toYaml .Values.ingress.tls | indent 4 }}
+  {{- end }}
 {{- end }}

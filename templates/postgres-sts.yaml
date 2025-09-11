@@ -19,7 +19,15 @@ spec:
           image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"
           imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
           env:
-{{ toYaml .Values.postgres.env | indent 12 }}
+          {{- range .Values.postgres.env }}
+            - name: {{ .name }}
+              {{- if .value }}
+              value: {{ .value | quote }}
+              {{- else if .valueFrom }}
+              valueFrom:
+                {{ toYaml .valueFrom | nindent 16 }}
+              {{- end }}
+          {{- end }}
           ports:
             - containerPort: {{ .Values.postgres.service.port }}
               name: pg
@@ -35,7 +43,8 @@ spec:
     - metadata:
         name: data
       spec:
-        accessModes: {{ toYaml .Values.postgres.persistence.accessModes | nindent 10 }}
+        accessModes:
+          - ReadWriteOnce
         resources:
           requests:
             storage: {{ .Values.postgres.persistence.size }}
