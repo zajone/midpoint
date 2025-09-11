@@ -98,8 +98,6 @@ app:
             secretKeyRef:
               name: midpoint-db-secret
               key: POSTGRES_PASSWORD
-        - name: MP_INIT_CFG
-          value: /opt/midpoint/var
         - name: MP_NO_ENV_COMPAT
           value: '1'
       command:
