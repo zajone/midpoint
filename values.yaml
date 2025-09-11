@@ -118,6 +118,14 @@ app:
     accessModes:
       - ReadWriteOnce
 
+  # HTTPS / Keystore configuration
+  https:
+    enabled: true
+    keystore:
+      secretName: midpoint-keystore
+      path: /opt/midpoint/var/keystore.p12
+      password: changeit   # Use a secret for production
+
 # Volumes for ConfigMap
 volumes:
   - name: midpoint-config

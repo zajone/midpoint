@@ -40,16 +40,31 @@ spec:
                 {{ toYaml .valueFrom | nindent 16 }}
               {{- end }}
           {{- end }}
+          {{- if .Values.app.https.enabled }}
+            - name: MIDPOINT_KEYSTORE
+              value: {{ .Values.app.https.keystore.path | quote }}
+            - name: MIDPOINT_KEYSTORE_PASSWORD
+              value: {{ .Values.app.https.keystore.password | quote }}
+          {{- end }}
           volumeMounts:
             - name: midpoint-home
               mountPath: /opt/midpoint/var
             - name: midpoint-config
               mountPath: /opt/midpoint/var/config.xml
               subPath: config.xml
+          {{- if .Values.app.https.enabled }}
+            - name: keystore
+              mountPath: {{ .Values.app.https.keystore.path }}
+              subPath: keystore.p12
+          {{- end }}
       volumes:
       {{- if .Values.volumes }}
       {{ toYaml .Values.volumes | nindent 6 }}
       {{- end }}
+      {{- if .Values.app.https.enabled }}
+      - name: keystore
+        secret:
+          secretName: {{ .Values.app.https.keystore.secretName }}
   volumeClaimTemplates:
     - metadata:
         name: midpoint-home
