@@ -69,7 +69,7 @@ app:
       value: '1'
     - name: MP_NO_ENV_COMPAT
       value: '1'
-    - name: MP_SET_midpoint_https_keystorePath
+    - name: MP_SET_midpoint_keystorePath
       value: /opt/midpoint/var/keystore.p12
     - name: MP_SET_midpoint_https_keystorePassword
       value: changeit
