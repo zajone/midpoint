@@ -64,7 +64,7 @@ spec:
         {{- end }}
 
   {{- if .Values.app.persistence.enabled }}
-  volumeClaimTemplates: # Corrected indentation
+  volumeClaimTemplates:
     - metadata:
         name: {{ .Values.app.persistence.name }}
       spec:
