@@ -41,14 +41,17 @@ spec:
               {{- end }}
           {{- end }}
           volumeMounts:
-            - name: midpoint-home
-              mountPath: /opt/midpoint/var
+  - name: midpoint-home
+    mountPath: /opt/midpoint/var
+  - name: midpoint-config
+    mountPath: /opt/midpoint/var/config.xml
+    subPath: config.xml
       volumes: []
   volumeClaimTemplates:
   - metadata:
       name: {{ .Values.app.persistence.name }}
     spec:
-      accessModes: [ "ReadWriteOnce" ]
+      accessModes: {{ toYaml .Values.app.persistence.accessModes | nindent 6 }}
       resources:
         requests:
           storage: {{ .Values.app.persistence.size }}
