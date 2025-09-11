@@ -69,6 +69,10 @@ app:
       value: '1'
     - name: MP_NO_ENV_COMPAT
       value: '1'
+    - name: MIDPOINT_KEYSTORE_PATH
+      value: /opt/midpoint/var/keystore.p12
+    - name: MIDPOINT_KEYSTORE_PASSWORD
+      value: changeit
   initContainers:
     - name: wait-for-db
       image: postgres:16-alpine
