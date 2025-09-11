@@ -47,7 +47,7 @@ spec:
             - name: midpoint-config
               mountPath: /opt/midpoint/var/config.xml
               subPath: config.xml
-            {{- if .Values.app.https.enabled }}
+            {{- if and .Values.app.https .Values.app.https.enabled }}
             - name: midpoint-keystore
               mountPath: {{ .Values.app.https.keystore.path }}
               subPath: keystore.p12
