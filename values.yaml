@@ -64,21 +64,7 @@ app:
     - name: MP_UNSET_midpoint_repository_hibernateHbm2ddl
       value: '1'
     - name: MP_NO_ENV_COMPAT
-      value: '1'
-
-    # Keystore for HTTPS
-    - name: MP_SET_midpoint_keystorePath
-      value: /opt/midpoint/var/keystore.p12
-    - name: MP_SET_midpoint_keystorePassword
-      value: changeit
-
-    # HTTPS configuration
-    - name: MP_SET_midpoint_https_port
-      value: "8443"
-    - name: MP_SET_midpoint_https_keystorePath
-      value: /opt/midpoint/var/keystore.p12
-    - name: MP_SET_midpoint_https_keystorePassword
-      value: changeit
+      value: '1't
 
     # HTTP port (optional, keep HTTP enabled)
     - name: MP_SET_midpoint_http_port
@@ -99,12 +85,6 @@ app:
     hostPath: /mnt/data/midpoint
     accessModes:
       - ReadWriteOnce
-  
-  https:
-    enabled: true
-    keystore:
-      secretName: midpoint-keystore
-      path: /opt/midpoint/var/keystore.p12
 
   initContainers:
     - name: wait-for-db
