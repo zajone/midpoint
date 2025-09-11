@@ -69,9 +69,9 @@ app:
       value: '1'
     - name: MP_NO_ENV_COMPAT
       value: '1'
-    - name: MIDPOINT_KEYSTORE_PATH
+    - name: MP_SET_midpoint_https_keystorePath
       value: /opt/midpoint/var/keystore.p12
-    - name: MIDPOINT_KEYSTORE_PASSWORD
+    - name: MP_SET_midpoint_https_keystorePassword
       value: changeit
   initContainers:
     - name: wait-for-db
