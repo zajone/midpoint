@@ -134,3 +134,34 @@ ingress:
 resources: {}
 tolerations: []
 affinity: {}
+
+# Add persistentVolumes and persistentVolumeClaims here:
+persistentVolumes:
+  - name: pv-data-midpoint-postgres-0
+    capacity: 1Gi
+    accessModes:
+      - ReadWriteOnce
+    reclaimPolicy: Retain
+    hostPath:
+      path: /mnt/data/data-midpoint-postgres-0
+
+  - name: pv-midpoint-home-midpoint-0
+    capacity: 1Gi
+    accessModes:
+      - ReadWriteOnce
+    reclaimPolicy: Retain
+    hostPath:
+      path: /mnt/data/data-midpoint-home-midpoint-0
+
+persistentVolumeClaims:
+  - name: data-midpoint-postgres-0
+    namespace: midpoint
+    accessModes:
+      - ReadWriteOnce
+    storageRequest: 1Gi
+
+  - name: midpoint-home-midpoint-0
+    namespace: midpoint
+    accessModes:
+      - ReadWriteOnce
+    storageRequest: 1Gi
