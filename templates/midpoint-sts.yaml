@@ -43,21 +43,25 @@ spec:
           ports:
             - containerPort: {{ .Values.app.service.port }}
           readinessProbe:
+            {{- if .Values.app.readinessProbe.enabled }}
             httpGet:
-              path: /midpoint/login.htm # Common MidPoint login page, adjust if a specific health endpoint exists
-              port: {{ .Values.app.service.port }}
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 6
+              path: {{ .Values.app.readinessProbe.path }}
+              port: {{ .Values.app.readinessProbe.port }}
+            initialDelaySeconds: {{ .Values.app.readinessProbe.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.app.readinessProbe.timeoutSeconds }}
+            periodSeconds: {{ .Values.app.readinessProbe.periodSeconds }}
+            failureThreshold: {{ .Values.app.readinessProbe.failureThreshold }}
+            {{- end }}
           livenessProbe:
+            {{- if .Values.app.livenessProbe.enabled }}
             httpGet:
-              path: /midpoint/login.htm # Common MidPoint login page, adjust if a specific health endpoint exists
-              port: {{ .Values.app.service.port }}
-            initialDelaySeconds: 60
-            periodSeconds: 20
-            timeoutSeconds: 5
-            failureThreshold: 3
+              path: {{ .Values.app.livenessProbe.path }}
+              port: {{ .Values.app.livenessProbe.port }}
+            initialDelaySeconds: {{ .Values.app.livenessProbe.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.app.livenessProbe.timeoutSeconds }}
+            periodSeconds: {{ .Values.app.livenessProbe.periodSeconds }}
+            failureThreshold: {{ .Values.app.livenessProbe.failureThreshold }}
+            {{- end }}
           env:
 {{- range .Values.app.env }}
             - name: {{ .name }}
